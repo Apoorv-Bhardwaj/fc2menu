@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+  <title>Weekly Menu — Mobile</title>
+
+  <!-- React + ReactDOM (UMD) -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <!-- Babel for JSX in-browser (nice for single-file demos) -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    :root{
+      --bg:#0f1724;
+      --card:#0b1220;
+      --muted:#9aa6b2;
+      --accent:#4fd1c5;
+      --text:#e6eef6;
+      --gap:12px;
+      font-family: system-ui, -apple-system, Roboto, "Helvetica Neue", "Noto Sans", "Segoe UI", "Arial";
+    }
+    html,body,#root{height:100%}
+    body{
+      margin:0;
+      background:linear-gradient(180deg,#071022 0%, #081425 100%);
+      color:var(--text);
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      padding:16px;
+      box-sizing:border-box;
+      font-size:15px;
+      line-height:1.35;
+    }
+
+    .wrap{
+      max-width:920px;
+      margin:0 auto;
+    }
+
+    header{
+      display:flex;
+      gap:12px;
+      align-items:center;
+      margin-bottom:12px;
+    }
+    header h1{
+      font-size:18px;
+      margin:0;
+      letter-spacing:0.2px;
+    }
+    .controls{
+      margin-left:auto;
+      display:flex;
+      gap:8px;
+      align-items:center;
+    }
+    button{
+      background:transparent;
+      border:1px solid rgba(255,255,255,0.08);
+      color:var(--text);
+      padding:8px 10px;
+      border-radius:10px;
+      font-size:13px;
+      min-height:44px; /* touch-friendly */
+      min-width:44px;
+    }
+    button.primary{
+      background:linear-gradient(90deg,var(--accent),#7ee7d9);
+      color:#042022;
+      border:0;
+    }
+    .card{
+      background:var(--card);
+      border-radius:14px;
+      padding:10px;
+      box-shadow: 0 6px 18px rgba(2,6,23,0.45);
+      border:1px solid rgba(255,255,255,0.02);
+    }
+
+    /* Responsive table container */
+    .table-wrap{
+      overflow:auto; /* allows horizontal scroll on narrow screens */
+      -webkit-overflow-scrolling:touch;
+      margin-top:12px;
+      border-radius:12px;
+    }
+    table{
+      border-collapse:collapse;
+      width:100%;
+      min-width:800px; /* encourage horizontal scroll on small phones */
+    }
+    th,td{
+      text-align:left;
+      padding:10px;
+      vertical-align:top;
+      border-bottom:1px dashed rgba(255,255,255,0.03);
+      font-size:13px;
+    }
+    th{
+      position:sticky;
+      top:0;
+      background:linear-gradient(180deg, rgba(3,6,12,0.9), rgba(3,6,12,0.85));
+      z-index:2;
+      font-weight:600;
+      font-size:13px;
+      color:var(--muted);
+      border-bottom:2px solid rgba(255,255,255,0.03);
+    }
+
+    .meal-title{
+      font-weight:600;
+      font-size:13px;
+      margin-bottom:6px;
+      color:#dff7f3;
+    }
+    .meal-time{
+      font-size:12px;
+      color:var(--muted);
+      margin-bottom:6px;
+    }
+    .items{
+      font-size:13px;
+      color:var(--text);
+      list-style:none;
+      padding:0;
+      margin:0;
+    }
+    .items li{
+      margin-bottom:6px;
+      padding-left:0;
+    }
+
+    /* compact layout for tiny screens (makes each day a block row) */
+    @media (max-width:520px){
+      table{min-width:600px}
+      th,td{padding:8px;font-size:13px}
+      .meal-title{font-size:12px}
+      .items li{font-size:13px}
+    }
+
+    /* loading / error */
+    .center{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+      color:var(--muted);
+    }
+
+    footer{margin-top:10px;color:var(--muted);font-size:12px;text-align:center}
+  </style>
+</head>
+<body>
+  <div id="root" class="wrap"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    // API URL (live)
+    const API_URL = 'https://tikm.coolstuff.work/api/menu';
+
+    function useMenu() {
+      const [data, setData] = useState(null);
+      const [loading, setLoading] = useState(true);
+      const [error, setError] = useState(null);
+
+      async function fetchMenu() {
+        setLoading(true);
+        setError(null);
+        try {
+          const res = await fetch(API_URL, { cache: 'no-store' });
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          const json = await res.json();
+          setData(json);
+        } catch (e) {
+          setError(e.message || String(e));
+          // keep data null on error
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      useEffect(() => { fetchMenu(); }, []);
+      return { data, loading, error, refresh: fetchMenu };
+    }
+
+    function DownloadButton({ data }) {
+      function download() {
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'tikm-menu.json';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      }
+      return <button onClick={download}>Download JSON</button>
+    }
+
+    function CopyJSON({ data }) {
+      async function copyIt() {
+        try {
+          await navigator.clipboard.writeText(JSON.stringify(data, null, 2));
+          alert('Copied JSON to clipboard');
+        } catch (e) {
+          alert('Could not copy: ' + e.message);
+        }
+      }
+      return <button onClick={copyIt}>Copy JSON</button>
+    }
+
+    function MenuTable({ menuObj }) {
+      // menuObj is the "menu" field object keyed by ISO date strings
+      // convert to array sorted by date
+      const days = Object.keys(menuObj).sort();
+      return (
+        <div className="table-wrap card" role="table" aria-label="Weekly menu table">
+          <table>
+            <thead>
+              <tr>
+                <th style={{minWidth:140}}>Date</th>
+                <th>Breakfast</th>
+                <th>Lunch</th>
+                <th>Snacks</th>
+                <th>Dinner</th>
+              </tr>
+            </thead>
+            <tbody>
+              {days.map(dateStr => {
+                const dayData = menuObj[dateStr];
+                const meals = dayData.meals || {};
+                return (
+                  <tr key={dateStr}>
+                    <td>
+                      <div style={{fontWeight:700}}>{dayData.day ?? dateStr}</div>
+                      <div style={{color:'#9aa6b2', marginTop:6, fontSize:12}}>{dateStr}</div>
+                    </td>
+
+                    {['breakfast','lunch','snacks','dinner'].map(mealKey => {
+                      const m = meals[mealKey];
+                      if (!m) {
+                        return <td key={mealKey}><div style={{color:'#7f8b95'}}>—</div></td>;
+                      }
+                      return (
+                        <td key={mealKey}>
+                          <div className="meal-title">{m.name}</div>
+                          <div className="meal-time">{m.startTime} — {m.endTime}</div>
+                          <ul className="items">
+                            {m.items && m.items.map((it, idx) => <li key={idx}>{it}</li>)}
+                          </ul>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+
+    function App(){
+      const { data, loading, error, refresh } = useMenu();
+
+      return (
+        <div>
+          <header>
+            <h1>Weekly Menu — Mobile</h1>
+            <div className="controls">
+              <button onClick={refresh} title="Refresh menu">Refresh</button>
+              {data ? <DownloadButton data={data} /> : null}
+              {data ? <CopyJSON data={data} /> : null}
+              <button onClick={() => { navigator.vibrate?.(30); alert('Yo! Menu loaded from tikm.coolstuff.work'); }}>Ping</button>
+            </div>
+          </header>
+
+          <main>
+            {loading && <div className="card center">Loading menu…</div>}
+            {error && <div className="card center">Error fetching menu: {error}<div style={{marginTop:8}}><small>Check network or CORS if opening file locally.</small></div></div>}
+            {data && data.menu && <MenuTable menuObj={data.menu} />}
+            {!loading && !error && !data && <div className="card center">No menu data available.</div>}
+          </main>
+
+          <footer>
+            Data fetched from <code style={{color:'#9fded2'}}>tikm.coolstuff.work/api/menu</code>
+          </footer>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
