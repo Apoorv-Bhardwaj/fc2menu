@@ -162,29 +162,41 @@
     const API_URL = 'https://tikm.coolstuff.work/api/menu';
 
     function useMenu() {
-      const [data, setData] = useState(null);
-      const [loading, setLoading] = useState(true);
-      const [error, setError] = useState(null);
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-      async function fetchMenu() {
-        setLoading(true);
-        setError(null);
-        try {
-          const res = await fetch(API_URL, { cache: 'no-store' });
-          if (!res.ok) throw new Error('HTTP ' + res.status);
-          const json = await res.json();
-          setData(json);
-        } catch (e) {
-          setError(e.message || String(e));
-          // keep data null on error
-        } finally {
-          setLoading(false);
+  async function fetchMenu() {
+      setLoading(true);
+      setError(null);
+
+      // SMARTEST WAY: Try relative path first (for Proxy/Netlify), 
+      // fallback to absolute for local testing.
+      const url = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? 'https://tikm.coolstuff.work/api/menu' // Local Laptop mode
+        : '/api/menu';                          // Netlify / Proxy mode
+
+      try {
+        console.log("Attempting fetch from:", url);
+        const res = await fetch(url, { cache: 'no-store' });
+        
+        if (!res.ok) {
+          throw new Error(`Server gave a ${res.status} error. If on Netlify, check your _redirects.`);
         }
+        
+        const json = await res.json();
+        setData(json);
+      } catch (e) {
+        console.error("Fetch Error:", e);
+        setError(e.message + " (Check CORS/Proxy Settings)");
+      } finally {
+        setLoading(false);
       }
-
-      useEffect(() => { fetchMenu(); }, []);
-      return { data, loading, error, refresh: fetchMenu };
     }
+
+    useEffect(() => { fetchMenu(); }, []);
+    return { data, loading, error, refresh: fetchMenu };
+  }
 
     function DownloadButton({ data }) {
       function download() {
@@ -270,7 +282,7 @@
       return (
         <div>
           <header>
-            <h1>Weekly Menu — Mobile</h1>
+            <h1>BetterFC2 by Apoorv</h1>
             <div className="controls">
               <button onClick={refresh} title="Refresh menu">Refresh</button>
               {data ? <DownloadButton data={data} /> : null}
